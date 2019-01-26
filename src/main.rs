@@ -217,14 +217,55 @@ const WORDS: &[&str] = &[
     "zombie",
 ];
 
+// Represents each letter the user must guess
+// hidden represents if the letter has been
+// guessed (false) or not (true)
+struct Letter {
+    letter: char,
+    hidden: bool,
+}
+impl Letter {
+    fn show(&self) -> char {
+        if self.hidden {
+            '_'
+        } else {
+            self.letter
+        }
+    }
+}
+
+fn build_letter(letter: char, hidden: bool) -> Letter {
+    Letter { letter, hidden }
+}
+
 fn main() {
     let secret_word = generate_word().to_string();
     println!("The secret word is {}", secret_word);
+    generate_displayed_word(secret_word);
 }
 
-fn generate_word() -> &'static str {
+// @Return the word the player needs to guess
+fn generate_word() -> String {
     let random_number = rand::thread_rng().gen_range(0, WORDS.len());
-    WORDS[random_number]
+    WORDS[random_number].to_string()
+}
+
+// @Return a vec of hidden Letters
+fn generate_displayed_word(secret_word: String) -> Vec<Letter> {
+    let mut displayed_word = Vec::new();
+    for c in secret_word.chars() {
+        displayed_word.push(build_letter(c, true))
+    }
+    show_displayed_word(&displayed_word);
+    displayed_word
+}
+
+fn show_displayed_word(word: &Vec<Letter>) {
+    let output: String = word
+        .into_iter()
+        .map(|letter| letter.show().to_string() + " ")
+        .collect();
+    println!("{:?}", output.trim());
 }
 
 // @Return the the user's guess

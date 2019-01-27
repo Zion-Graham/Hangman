@@ -234,14 +234,47 @@ impl Letter {
     }
 }
 
-fn build_letter(letter: char, hidden: bool) -> Letter {
-    Letter { letter, hidden }
+fn build_letter(letter: char) -> Letter {
+    Letter {
+        letter,
+        hidden: true,
+    }
 }
 
 fn main() {
+    // Generates a word for the player to guess "word"
     let secret_word = generate_word().to_string();
-    println!("The secret word is {}", secret_word);
-    generate_displayed_word(secret_word);
+    // The word representing the player's progress "w _ o _"
+    let mut displayed_word = generate_displayed_word(&secret_word);
+    while !win(&displayed_word) {
+        update_displayed_word(guess(), &mut displayed_word);
+        show_displayed_word(&displayed_word);
+        // update_displayed_word
+    }
+    println!("You Win!")
+}
+
+fn win(displayed_word: &Vec<Letter>) -> bool {
+    !displayed_word
+        .into_iter()
+        .map(|letter| letter.show() != '_')
+        .collect::<Vec<bool>>()
+        .contains(&false)
+}
+
+// Update the displayed word after a guess
+// @Returns if the word was updated
+fn update_displayed_word(guess: Vec<char>, displayed_word: &mut Vec<Letter>) -> bool {
+    let mut updated: bool = false;
+    if guess.len() == 1 {
+        for l in displayed_word {
+            if guess[0] == l.letter {
+                l.hidden = false;
+                updated = true;
+            }
+        }
+    }
+    updated
 }
 
 // @Return the word the player needs to guess
@@ -251,10 +284,10 @@ fn generate_word() -> String {
 }
 
 // @Return a vec of hidden Letters
-fn generate_displayed_word(secret_word: String) -> Vec<Letter> {
+fn generate_displayed_word(secret_word: &String) -> Vec<Letter> {
     let mut displayed_word = Vec::new();
     for c in secret_word.chars() {
-        displayed_word.push(build_letter(c, true))
+        displayed_word.push(build_letter(c))
     }
     show_displayed_word(&displayed_word);
     displayed_word
@@ -269,12 +302,16 @@ fn show_displayed_word(word: &Vec<Letter>) {
 }
 
 // @Return the the user's guess
-fn guess() -> String {
+fn guess() -> Vec<char> {
     let mut input = String::new();
     while input.is_empty() {
         println!("Guess a letter or a word!");
         io::stdin().read_line(&mut input).unwrap();
-        input = input.trim().to_string();
+        input = input.to_lowercase().trim().to_string();
     }
-    input
+    let mut guess: Vec<char> = Vec::new();
+    for c in input.chars() {
+        guess.push(c);
+    }
+    guess
 }

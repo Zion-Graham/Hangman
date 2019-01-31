@@ -1,6 +1,6 @@
-extern crate rand;
 use rand::Rng;
-use std::io;
+use std::{fmt, io};
+
 const WORDS: &[&str] = &[
     "abruptly",
     "absurd",
@@ -217,88 +217,102 @@ const WORDS: &[&str] = &[
     "zombie",
 ];
 
+/* Stuff to think about
+    1. Instead of using a builder you can implement a new function inside the struct
+    2. Or you could use Default::default()
+        Benefits
+        - able to create generic methods for anytype that implements default::defult
+*/
 // Represents each letter the user must guess
 // hidden represents if the letter has been
 // guessed (false) or not (true)
+#[derive(Debug, Default)]
 struct Letter {
     letter: char,
     hidden: bool,
+    num: i32,
+    other: Option<bool>,
+    stuff: String,
 }
-impl Letter {
-    fn show(&self) -> char {
+
+impl fmt::Display for Letter {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.hidden {
-            '_'
+            write!(f, "*")
         } else {
-            self.letter
+            write!(f, "{} ", self.letter)
         }
     }
 }
 
-fn build_letter(letter: char) -> Letter {
-    Letter {
-        letter,
-        hidden: true,
+fn create<T>() -> T
+where
+    T: Default,
+{
+    Default::default()
+}
+
+struct Word {
+    letters: Vec<Letter>,
+}
+
+impl fmt::Display for Word {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let word: String = self.letters.iter().map(|l| format!("{}", l)).collect();
+
+        write!(f, "-- {} --", word)
+    }
+}
+
+impl Default for Word {
+    fn default() -> Self {
+        let random_number = rand::thread_rng().gen_range(0, WORDS.len());
+        let to_guess = WORDS[random_number].to_owned();
+        let letters: Vec<Letter> = to_guess
+            .chars()
+            .map(|letter| Letter {
+                letter,
+                num: 2,
+                ..Default::default()
+            })
+            .collect();
+
+        Word { letters }
+    }
+}
+impl Word {
+    fn win(&self) -> bool {
+        let discovered: Vec<_> = self.letters.iter().filter(|letter| letter.hidden).collect();
+
+        discovered.len() == 0
+    }
+
+    // Update the displayed word after a guess
+    // @Returns if the word was updated
+    fn update_letters(&mut self, guess: Vec<char>) {
+        self.letters.iter_mut().for_each(|l| {
+            if guess.contains(&l.letter) {
+                l.hidden = false;
+            }
+        });
     }
 }
 
 fn main() {
     // Generates a word for the player to guess "word"
-    let secret_word = generate_word().to_string();
     // The word representing the player's progress "w _ o _"
-    let mut displayed_word = generate_displayed_word(&secret_word);
-    while !win(&displayed_word) {
-        update_displayed_word(guess(), &mut displayed_word);
-        show_displayed_word(&displayed_word);
+
+    let l: Letter = create();
+    let w: Word = create();
+
+    let mut displayed_word: Word = Default::default();
+    println!("{}", displayed_word);
+    while !displayed_word.win() {
+        displayed_word.update_letters(guess());
+        println!("{}", displayed_word);
         // update_displayed_word
     }
     println!("You Win!")
-}
-
-fn win(displayed_word: &Vec<Letter>) -> bool {
-    !displayed_word
-        .into_iter()
-        .map(|letter| letter.show() != '_')
-        .collect::<Vec<bool>>()
-        .contains(&false)
-}
-
-// Update the displayed word after a guess
-// @Returns if the word was updated
-fn update_displayed_word(guess: Vec<char>, displayed_word: &mut Vec<Letter>) -> bool {
-    let mut updated: bool = false;
-    if guess.len() == 1 {
-        for l in displayed_word {
-            if guess[0] == l.letter {
-                l.hidden = false;
-                updated = true;
-            }
-        }
-    }
-    updated
-}
-
-// @Return the word the player needs to guess
-fn generate_word() -> String {
-    let random_number = rand::thread_rng().gen_range(0, WORDS.len());
-    WORDS[random_number].to_string()
-}
-
-// @Return a vec of hidden Letters
-fn generate_displayed_word(secret_word: &String) -> Vec<Letter> {
-    let mut displayed_word = Vec::new();
-    for c in secret_word.chars() {
-        displayed_word.push(build_letter(c))
-    }
-    show_displayed_word(&displayed_word);
-    displayed_word
-}
-
-fn show_displayed_word(word: &Vec<Letter>) {
-    let output: String = word
-        .into_iter()
-        .map(|letter| letter.show().to_string() + " ")
-        .collect();
-    println!("{:?}", output.trim());
 }
 
 // @Return the the user's guess
